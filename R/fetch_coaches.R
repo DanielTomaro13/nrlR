@@ -67,23 +67,26 @@ fetch_coaches_rugbyleagueproject <- function(season, league) {
   rows <- rvest::html_elements(page, "table tr")
   rows <- rows[-1]  # drop header row
   
+  # Helper to clean numeric columns safely
   clean_as_integer <- function(x) {
-    x <- rvest::html_text(x, trim = TRUE)
-    x <- ifelse(x == "" | x == "-", NA_character_, x)
-    suppressWarnings(as.integer(x))
+    txt <- rvest::html_text(x, trim = TRUE)
+    txt <- ifelse(txt == "" | txt == "-", NA_character_, txt)
+    suppressWarnings(as.integer(txt))
+  }
+  
+  # Helper to extract one row of coach data
   extract_row <- function(row) {
     cols <- rvest::html_elements(row, "td")
     if (length(cols) < 5) return(NULL)
-  
-    }
+    
     tibble::tibble(
       season = season,
       league = league,
       coach = rvest::html_text(cols[[1]], trim = TRUE),
       team = rvest::html_text(cols[[2]], trim = TRUE),
-      games = as.integer(rvest::html_text(cols[[3]], trim = TRUE)),
-      wins = as.integer(rvest::html_text(cols[[4]], trim = TRUE)),
-      losses = as.integer(rvest::html_text(cols[[5]], trim = TRUE))
+      games = clean_as_integer(cols[[3]]),
+      wins = clean_as_integer(cols[[4]]),
+      losses = clean_as_integer(cols[[5]])
     )
   }
   

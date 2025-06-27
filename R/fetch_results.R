@@ -69,7 +69,7 @@ fetch_results_rugbyproject <- function(seasons, league) {
     if (base::is.null(page)) return(NULL)
     
     rows <- rvest::html_elements(page, "table tr")
-    rows <- base::tail(rows, -1)  # drop header row
+    rows <- utils::tail(rows, -1)  # drop header row
     
     purrr::map_dfr(rows, function(row) {
       cols <- rvest::html_elements(row, "td")

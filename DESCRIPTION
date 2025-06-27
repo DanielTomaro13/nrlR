@@ -3,21 +3,20 @@ Type: Package
 Title: Access and Analyze Rugby League Data from Rugby League Project
 Version: 0.1.0
 Authors@R: 
-    person(given = "Daniel", 
-           family = "Tomaro", 
-           email = "danieltomaro@icloud.com", 
+    person(given = "Daniel",  
+           family = "Tomaro",  
+           email = "danieltomaro@icloud.com",  
            role = c("aut", "cre"))
 Maintainer: Daniel Tomaro <danieltomaro@icloud.com>
-Description: Provides a set of tools for scraping and analyzing Rugby League data from 
-    the Rugby League Project website. Includes functions to fetch player statistics, 
-    match results, ladders, venues, and coaching data across multiple leagues 
-    including NRL, Super League, NSW Cup, QLD Cup, and others. The package is being 
-    actively developed with plans to integrate advanced statistics from additional 
+Description: Provides a set of tools for scraping and analyzing Rugby League data from  
+    the Rugby League Project website. Includes functions to fetch player statistics,  
+    match results, ladders, venues, and coaching data across multiple leagues  
+    including NRL, Super League, NSW Cup, QLD Cup, and others. The package is being  
+    actively developed with plans to integrate advanced statistics from additional  
     sources to support deeper performance analysis.
 License: MIT + file LICENSE
 Encoding: UTF-8
-LazyData: true
-RoxygenNote: 7.3.2
+LazyData: false
 Depends: R (>= 3.5.0)
 Imports:
     rvest,
@@ -30,3 +29,5 @@ Imports:
     cli,
     xml2,
     readr
+URL: https://github.com/DanielTomaro13/nrlR
+BugReports: https://github.com/DanielTomaro13/nrlR/issues
