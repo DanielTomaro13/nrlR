@@ -8,12 +8,9 @@ Authors@R:
            email = "danieltomaro@icloud.com",  
            role = c("aut", "cre"))
 Maintainer: Daniel Tomaro <danieltomaro@icloud.com>
-Description: Provides a set of tools for scraping and analyzing Rugby League data from  
-    the Rugby League Project website. Includes functions to fetch player statistics,  
-    match results, ladders, venues, and coaching data across multiple leagues  
-    including NRL, Super League, NSW Cup, QLD Cup, and others. The package is being  
-    actively developed with plans to integrate advanced statistics from additional  
-    sources to support deeper performance analysis.
+Description: Description: Tools for scraping and analyzing rugby league data.
+Includes data from multiple leagues including the 'NRL', Super League, 'NSW' Cup, 'QLD' Cup, and more.
+
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: false
