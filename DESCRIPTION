@@ -8,9 +8,9 @@ Authors@R:
            email = "danieltomaro@icloud.com",  
            role = c("aut", "cre"))
 Maintainer: Daniel Tomaro <danieltomaro@icloud.com>
-Description: Description: Tools for scraping and analyzing rugby league data.
-Includes data from multiple leagues including the 'NRL', Super League, 'NSW' Cup, 'QLD' Cup, and more.
-
+Description: Tools for scraping and analyzing rugby league data. 
+ Includes data from multiple leagues including the 'NRL', Super League, 
+ 'NSW' Cup, 'QLD' Cup, and more.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: false
