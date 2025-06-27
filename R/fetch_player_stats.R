@@ -16,22 +16,21 @@ fetch_player_stats <- function(seasons,
                                rounds = 1:30,
                                save_dir = NULL) {
   league <- base::match.arg(league)
-  current_year <- base::as.integer(base::format(base::Sys.Date(), "%Y"))
+  current_year <- as.integer(format(Sys.Date(), "%Y"))
+  
   if (any(!seasons %in% 1998:current_year)) {
     cli::cli_abort(paste0("All seasons must be between 1998 and ", current_year, "."))
   }
   
   if (is.null(save_dir)) {
-    # Return combined data for all seasons
     return(fetch_player_stats_rugbyproject(seasons, league, rounds))
   } else {
-    # Save each season's data to separate .rds files
     for (season in seasons) {
       stats <- fetch_player_stats_rugbyproject(season, league, rounds)
       dir.create(save_dir, showWarnings = FALSE, recursive = TRUE)
-      file_path <- paste0(save_dir, "/player_stats_", league, "_", season, ".rds")
+      file_path <- file.path(save_dir, paste0("player_stats_", league, "_", season, ".rds"))
       readr::write_rds(stats, file_path)
-      cli::cli_inform(paste0("Saved ", base::nrow(stats), " rows to ", file_path))
+      cli::cli_inform(paste0("Saved ", nrow(stats), " rows to ", file_path))
     }
     invisible(NULL)
   }
@@ -39,9 +38,9 @@ fetch_player_stats <- function(seasons,
 
 #' Internal: Fetch Rugby League Player Stats from Rugby League Project
 #'
-#' @param seasons Integer vector of length 1 (single season).
+#' @param seasons Integer vector (can be length 1).
 #' @param league Character scalar.
-#' @param rounds Integer vector of rounds.
+#' @param rounds Integer vector.
 #' @return A tibble of player stats.
 #' @noRd
 fetch_player_stats_rugbyproject <- function(seasons, league, rounds) {
@@ -54,9 +53,10 @@ fetch_player_stats_rugbyproject <- function(seasons, league, rounds) {
       "penrith-panthers", "south-sydney-rabbitohs", "st-george-illa-dragons",
       "sydney-roosters", "wests-tigers"
     )
+    # Add other leagues here...
   )
   
-  if (base::is.null(league_team_slugs[[league]])) {
+  if (is.null(league_team_slugs[[league]])) {
     cli::cli_abort(paste0("No team slug list defined for ", league, "."))
   }
   
@@ -64,24 +64,23 @@ fetch_player_stats_rugbyproject <- function(seasons, league, rounds) {
   
   scrape_match <- function(url, round, season) {
     slug <- stringr::str_extract(url, "(?<=round-\\d{1,2}/)[^/]+")
-    teams_in_url <- base::strsplit(slug, "-vs-")[[1]]
-    team_names <- stringr::str_replace_all(teams_in_url, "-", " ")
-    team_names <- stringr::str_to_title(team_names)
+    teams_in_url <- strsplit(slug, "-vs-")[[1]]
+    team_names <- stringr::str_to_title(gsub("-", " ", teams_in_url))
     
     page <- tryCatch(xml2::read_html(url), error = function(e) return(NULL))
-    if (base::is.null(page)) return(NULL)
+    if (is.null(page)) return(NULL)
     
     tables <- rvest::html_elements(page, "table.list")
-    if (base::length(tables) < 2) return(NULL)
+    if (length(tables) < 2) return(NULL)
     
     extract_table <- function(tbl, team_name) {
       rows <- rvest::html_elements(tbl, "tr")
-      if (base::length(rows) < 4) return(NULL)
-      rows <- rows[3:base::length(rows)]
+      if (length(rows) < 4) return(NULL)
+      rows <- rows[3:length(rows)]
       
       data <- lapply(rows, function(row) {
         cells <- rvest::html_elements(row, "td")
-        sapply(cells, function(cell) rvest::html_text(cell, trim = TRUE))
+        sapply(cells, rvest::html_text, trim = TRUE)
       })
       
       data <- Filter(function(x) length(x) >= 6, data)
@@ -89,11 +88,11 @@ fetch_player_stats_rugbyproject <- function(seasons, league, rounds) {
       tbl_rows <- lapply(data, function(x) {
         tibble::tibble(
           player = x[1],
-          age = suppressWarnings(base::as.numeric(x[2])),
-          tries = suppressWarnings(base::as.numeric(x[3])),
-          goals = suppressWarnings(base::as.numeric(x[4])),
-          field_goals = suppressWarnings(base::as.numeric(x[5])),
-          points = suppressWarnings(base::as.numeric(x[6])),
+          age = suppressWarnings(as.numeric(x[2])),
+          tries = suppressWarnings(as.numeric(x[3])),
+          goals = suppressWarnings(as.numeric(x[4])),
+          field_goals = suppressWarnings(as.numeric(x[5])),
+          points = suppressWarnings(as.numeric(x[6])),
           team = team_name,
           round = round,
           match_url = url,
@@ -103,8 +102,7 @@ fetch_player_stats_rugbyproject <- function(seasons, league, rounds) {
       })
       
       combined <- dplyr::bind_rows(tbl_rows)
-      combined <- dplyr::filter(combined, .data$player != "total" & .data$player != "Total")
-      return(combined)
+      dplyr::filter(combined, .data$player != "total" & .data$player != "Total")
     }
     
     tbl1 <- extract_table(tables[[1]], team_names[1])
@@ -115,7 +113,7 @@ fetch_player_stats_rugbyproject <- function(seasons, league, rounds) {
   
   check_url_exists <- function(url) {
     res <- tryCatch(httr::HEAD(url, httr::timeout(5)), error = function(e) NULL)
-    if (base::is.null(res)) return(FALSE)
+    if (is.null(res)) return(FALSE)
     res$status_code == 200
   }
   
@@ -129,7 +127,10 @@ fetch_player_stats_rugbyproject <- function(seasons, league, rounds) {
     
     matchups <- dplyr::filter(matchups, .data$team_a != .data$team_b)
     
-    matchups$slug <- mapply(function(a, b) paste0(a, "-vs-", b), matchups$team_a, matchups$team_b, USE.NAMES = FALSE)
+    matchups$slug <- mapply(function(a, b) paste0(a, "-vs-", b),
+                            matchups$team_a, matchups$team_b,
+                            USE.NAMES = FALSE)
+    
     matchups$url <- mapply(function(rnd, slg) {
       glue::glue("https://www.rugbyleagueproject.org/seasons/{league}-{season}/round-{rnd}/{slg}/stats.html")
     }, matchups$round, matchups$slug, USE.NAMES = FALSE)
@@ -140,11 +141,11 @@ fetch_player_stats_rugbyproject <- function(seasons, league, rounds) {
     cli::cli_inform(paste0("Found ", nrow(matchups), " valid matches for ", league, " ", season))
     
     match_data <- Map(scrape_match, matchups$url, matchups$round, MoreArgs = list(season = season))
-    
     dplyr::bind_rows(match_data)
   })
   
-  all_data <- dplyr::bind_rows(all_data_list)
-  
-  return(all_data)
+  dplyr::bind_rows(all_data_list)
 }
+
+# Avoid CRAN NOTE: declare global binding
+utils::globalVariables(c(".data"))
