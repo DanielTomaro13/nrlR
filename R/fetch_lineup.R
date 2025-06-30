@@ -26,8 +26,6 @@ fetch_lineups <- function(url, source = "nrl.com", type = "team_list") {
   cli::cli_inform(glue::glue("Fetching team lineups from {url}"))
   
   page <- xml2::read_html(url)
-  
-  # Walk DOM
   parent_nodes <- rvest::html_elements(page, xpath = "//*[(self::div or self::ul)]")
   lineups_list <- list()
   game_index <- 0
@@ -38,11 +36,14 @@ fetch_lineups <- function(url, source = "nrl.com", type = "team_list") {
     if (!is.na(class_attr) && stringr::str_detect(class_attr, "match-header")) {
       home_team <- rvest::html_text(rvest::html_element(node, ".match-team__name--home"), trim = TRUE)
       away_team <- rvest::html_text(rvest::html_element(node, ".match-team__name--away"), trim = TRUE)
-      games_info <- dplyr::bind_rows(games_info, tibble::tibble(
-        game = glue::glue("{home_team} vs {away_team}"),
-        home_team = home_team,
-        away_team = away_team
-      ))
+      games_info <- dplyr::bind_rows(
+        games_info,
+        tibble::tibble(
+          game = glue::glue("{home_team} vs {away_team}"),
+          home_team = home_team,
+          away_team = away_team
+        )
+      )
       game_index <- game_index + 1
     }
     
@@ -57,22 +58,32 @@ fetch_lineups <- function(url, source = "nrl.com", type = "team_list") {
           home_role_full <- rvest::html_text(rvest::html_element(home_node, "span.u-visually-hidden"), trim = TRUE)
           home_role <- stringr::str_extract(home_role_full, "^[^ ]+")
           home_last <- rvest::html_text(rvest::html_element(home_node, "span.u-font-weight-700"), trim = TRUE)
-          home_first <- rvest::html_text2(home_node) %>%
-            stringr::str_replace(home_role_full, "") %>%
-            stringr::str_replace(home_last, "") %>%
-            stringr::str_squish()
-          home_role <- ifelse(is.na(home_role), "Unknown", home_role)
+          home_first <- stringr::str_squish(
+            stringr::str_replace(
+              stringr::str_replace(
+                rvest::html_text2(home_node),
+                home_role_full, ""
+              ),
+              home_last, ""
+            )
+          )
+          if (is.na(home_role)) home_role <- "Unknown"
           
           # AWAY
           away_node <- rvest::html_element(li, ".team-list-profile--away .team-list-profile__name")
           away_role_full <- rvest::html_text(rvest::html_element(away_node, "span.u-visually-hidden"), trim = TRUE)
           away_role <- stringr::str_extract(away_role_full, "^[^ ]+")
           away_last <- rvest::html_text(rvest::html_element(away_node, "span.u-font-weight-700"), trim = TRUE)
-          away_first <- rvest::html_text2(away_node) %>%
-            stringr::str_replace(away_role_full, "") %>%
-            stringr::str_replace(away_last, "") %>%
-            stringr::str_squish()
-          away_role <- ifelse(is.na(away_role), "Unknown", away_role)
+          away_first <- stringr::str_squish(
+            stringr::str_replace(
+              stringr::str_replace(
+                rvest::html_text2(away_node),
+                away_role_full, ""
+              ),
+              away_last, ""
+            )
+          )
+          if (is.na(away_role)) away_role <- "Unknown"
           
           lineups_list[[length(lineups_list)+1]] <- tibble::tibble(
             game = this_game$game,
@@ -93,6 +104,7 @@ fetch_lineups <- function(url, source = "nrl.com", type = "team_list") {
     }
   }
   
-  dplyr::bind_rows(lineups_list) %>%
-    dplyr::filter(!is.na(.data$first_name), !is.na(.data$last_name))
+  final_tbl <- dplyr::bind_rows(lineups_list)
+  final_tbl <- final_tbl[!is.na(final_tbl$first_name) & !is.na(final_tbl$last_name), ]
+  return(final_tbl)
 }

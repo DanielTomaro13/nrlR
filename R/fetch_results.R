@@ -53,7 +53,9 @@ fetch_results_rugbyproject <- function(seasons, league) {
     cli::cli_abort(glue::glue("All seasons must be between 1998 and {current_year}."))
   }
   
-  results <- purrr::map_dfr(seasons, function(season) {
+  all_results <- list()
+  
+  for (season in seasons) {
     message(glue::glue("Fetching results for season {season}..."))
     
     url <- glue::glue("https://www.rugbyleagueproject.org/seasons/{slug}-{season}/results.html")
@@ -65,7 +67,7 @@ fetch_results_rugbyproject <- function(seasons, league) {
         return(NULL)
       }
     )
-    if (is.null(page)) return(NULL)
+    if (is.null(page)) next
     
     rows <- rvest::html_elements(page, "table tr")
     rows <- utils::tail(rows, -1)
@@ -89,7 +91,6 @@ fetch_results_rugbyproject <- function(seasons, league) {
       )
     })
     
-    # Build full dates
     current_month <- NA_character_
     dates_full <- purrr::map_chr(raw_data$date_raw, function(x) {
       if (stringr::str_detect(x, "[A-Za-z]")) {
@@ -101,14 +102,23 @@ fetch_results_rugbyproject <- function(seasons, league) {
         return(NA_character_)
       }
     })
+    
     dates_full <- stringr::str_replace(dates_full, "^([A-Za-z]+) (\\d{4})$", "\\1 1 \\2")
     parsed_dates <- suppressWarnings(
       lubridate::parse_date_time(dates_full, orders = c("b d Y", "d b Y"), tz = "UTC")
     )
     raw_data$date <- as.Date(parsed_dates)
-    raw_data$date <- tidyr::fill(raw_data, .data$date, .direction = "down")$date
     
-    # Adjust using weekday from time
+    # fill missing dates down
+    idx <- which(!is.na(raw_data$date))
+    for (i in seq_along(raw_data$date)) {
+      if (is.na(raw_data$date[i]) && length(idx) > 0) {
+        prev <- max(idx[idx < i], na.rm = TRUE)
+        raw_data$date[i] <- raw_data$date[prev]
+      }
+    }
+    
+    # adjust using weekday from time
     raw_data$weekday_str <- stringr::str_sub(raw_data$time, 1, 3)
     target_days <- c("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
     adjusted_dates <- raw_data$date
@@ -122,11 +132,10 @@ fetch_results_rugbyproject <- function(seasons, league) {
     }
     raw_data$date <- adjusted_dates
     
-    # Calculate round
+    # calculate round
     round_vec <- integer(length = nrow(raw_data))
     current_round <- 1
     prev_month_day <- NA_character_
-    
     for (i in seq_along(raw_data$date_raw)) {
       if (stringr::str_detect(raw_data$date_raw[i], "[A-Za-z]")) {
         prev_month_day <- raw_data$date_raw[i]
@@ -136,9 +145,18 @@ fetch_results_rugbyproject <- function(seasons, league) {
     }
     raw_data$round <- round_vec
     
-    raw_data %>%
-      dplyr::select(season, league, round, date, time, home_team, home_score, away_team, away_score, referee, venue, attendance)
-  })
+    raw_data <- dplyr::select(
+      raw_data,
+      .data$season, .data$league, .data$round, .data$date, .data$time,
+      .data$home_team, .data$home_score, .data$away_team, .data$away_score,
+      .data$referee, .data$venue, .data$attendance
+    )
+    
+    all_results[[length(all_results) + 1]] <- raw_data
+  }
   
+  results <- dplyr::bind_rows(all_results)
   return(results)
 }
+
+
