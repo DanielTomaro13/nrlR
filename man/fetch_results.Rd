@@ -14,12 +14,12 @@ fetch_results(
 \arguments{
 \item{seasons}{Integer vector. One or more seasons to fetch (1998 or later).}
 
-\item{league}{Character. League name.}
+\item{league}{Character. League name. See options.}
 
 \item{source}{Character. Data source; only "rugbyleagueproject" currently supported.}
 }
 \value{
-A tibble of match results.
+A tibble of match results with parsed date and round.
 }
 \description{
 Main wrapper to fetch match results for one or more seasons.

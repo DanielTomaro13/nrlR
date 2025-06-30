@@ -9,10 +9,10 @@ fetch_results_rugbyproject(seasons, league)
 \arguments{
 \item{seasons}{Integer vector. One or more seasons to fetch (1998 or later).}
 
-\item{league}{Character. League name.}
+\item{league}{Character. League name. See options.}
 }
 \value{
-A tibble of match results.
+A tibble of match results with parsed date, aligned to weekday, and round.
 }
 \description{
 Fetch Rugby League Match Results from Rugby League Project

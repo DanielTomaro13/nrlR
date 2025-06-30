@@ -2,6 +2,7 @@
 
 export(fetch_coaches)
 export(fetch_ladder)
+export(fetch_lineups)
 export(fetch_player_stats)
 export(fetch_results)
 export(fetch_results_rugbyproject)

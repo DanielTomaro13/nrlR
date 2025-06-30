@@ -28,3 +28,4 @@ Imports:
     readr
 URL: https://github.com/DanielTomaro13/nrlR
 BugReports: https://github.com/DanielTomaro13/nrlR/issues
+RoxygenNote: 7.3.2

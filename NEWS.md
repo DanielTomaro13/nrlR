@@ -1,6 +1,10 @@
 # nrlR News
 
-## What's Coming
+## Improvements 30/06/2025
+Added a fetch-lineup function which scrapes team lists released by NRL.com on a Tuesday 
+
+
+## What's Coming - 28/06/2025
 
 Future versions of `nrlR` will introduce:
 - Integration with advanced statistics from additional sources (e.g., NRL.com)
