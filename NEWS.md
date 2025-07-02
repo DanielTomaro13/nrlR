@@ -1,5 +1,9 @@
 # nrlR News
 
+## Improvements 2/07/2025
+
+Added a fetch_fixtures function which scrapes NRL.com draw for future fixtures and past results
+
 ## Improvements 30/06/2025
 Added a fetch-lineup function which scrapes team lists released by NRL.com on a Tuesday 
 
