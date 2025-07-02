@@ -175,6 +175,85 @@ get_player_stats_for_fixtures <- function(fixtures, comp) {
   dplyr::bind_rows(player_stats_list)
 }
 
+#' Fetch Champion Data Team Stats for Competition
+#'
+#' Fetches team stats for the given Champion Data competition ID.
+#' If round is provided, filters fixtures to that round.
+#'
+#' @param comp Integer. Competition ID (required).
+#' @param round Integer or NULL. Round filter (optional).
+#'
+#' @return Tibble of team stats joined with fixture info.
+#' @export
+fetch_team_stats_championdata <- function(comp, round = NULL) {
+  if (missing(comp)) {
+    stop("Parameter 'comp' (competition ID) is required.", call. = FALSE)
+  }
+  
+  competitions_df <- get_competitions()
+  if (!(comp %in% competitions_df$id)) {
+    stop("Competition ID ", comp, " not found in available competitions.", call. = FALSE)
+  }
+  
+  fixtures <- get_fixtures(comp)
+  
+  if (!is.null(round)) {
+    fixtures <- fixtures[fixtures$roundNumber == round, , drop = FALSE]
+  }
+  
+  fixtures <- fixtures[fixtures$matchStatus == "complete", , drop = FALSE]
+  
+  if (nrow(fixtures) == 0L) {
+    stop("No completed matches found for competition ", comp,
+         if (!is.null(round)) paste0(", round ", round), ".", call. = FALSE)
+  }
+  
+  team_stats_list <- vector("list", length = nrow(fixtures))
+  
+  for (i in seq_len(nrow(fixtures))) {
+    match_id <- fixtures$matchId[i]
+    url_match <- glue::glue("https://mc.championdata.com/data/{comp}/{match_id}.json")
+    
+    match_data <- tryCatch(jsonlite::fromJSON(url_match), error = function(e) NULL)
+    if (is.null(match_data) || is.null(match_data$matchStats)) next
+    
+    ts <- NULL
+    if ("teamStats" %in% names(match_data$matchStats) &&
+        "team" %in% names(match_data$matchStats$teamStats) &&
+        length(match_data$matchStats$teamStats$team) > 0L) {
+      ts <- tibble::as_tibble(match_data$matchStats$teamStats$team)
+      ts$match_id <- match_id
+      ts$competition_id <- comp
+    }
+    
+    team_stats_list[[i]] <- ts
+  }
+  
+  team_stats <- dplyr::bind_rows(team_stats_list)
+  
+  if (nrow(team_stats) == 0L) {
+    message("No team stats found for competition ", comp, ".")
+    return(tibble::tibble())
+  }
+  
+  # Join with fixture info
+  joined <- dplyr::left_join(
+    team_stats,
+    fixtures[, c("matchId", "competition_id", "roundNumber", "homeSquadName", 
+                 "awaySquadName", "matchStatus", "utcStartTime"), drop = FALSE],
+    by = c("match_id" = "matchId", "competition_id")
+  )
+  
+  names(joined)[names(joined) == "roundNumber"] <- "round"
+  names(joined)[names(joined) == "homeSquadName"] <- "home_team"
+  names(joined)[names(joined) == "awaySquadName"] <- "away_team"
+  names(joined)[names(joined) == "matchStatus"] <- "match_status"
+  names(joined)[names(joined) == "utcStartTime"] <- "utc_start"
+  
+  return(joined)
+}
+
+
 #' Internal: Fetch Rugby League Project Player Stats
 #'
 #' Fetch player stats from Rugby League Project website by scraping match pages.

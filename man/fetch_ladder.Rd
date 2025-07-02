@@ -15,7 +15,8 @@ fetch_ladder(
 \item{season}{Integer. Season year (1998 or later).}
 
 \item{league}{Character. One of: "nrl", "super_league", "championship", "league_one",
-"womens_super_league", "qld_cup", "nsw_cup", "state_of_origin", "challenge_cup", "1895_cup".}
+"womens_super_league", "qld_cup", "nsw_cup",
+"state_of_origin", "challenge_cup", "1895_cup".}
 
 \item{source}{Character. Either "rugbyleagueproject" or "nrl".}
 }
