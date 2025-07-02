@@ -5,23 +5,30 @@
 #' @param season Integer. Season year (1998 or later).
 #' @param league Character. One of: "nrl", "super_league", "championship", "league_one",
 #'   "womens_super_league", "qld_cup", "nsw_cup", "state_of_origin", "challenge_cup", "1895_cup".
-#' @param source Character. Currently only "rugbyleagueproject" supported.
+#' @param source Character. Either "rugbyleagueproject" or "nrl".
 #'
 #' @return A tibble with ladder standings and statistics.
 #' @export
 #'
 #' @examples
+#' fetch_ladder(2025, league = "nrl", source = "nrl")
 #' fetch_ladder(2024, league = "super_league")
 fetch_ladder <- function(season,
                          league = c("nrl", "super_league", "championship", "league_one",
                                     "womens_super_league", "qld_cup", "nsw_cup",
                                     "state_of_origin", "challenge_cup", "1895_cup"),
-                         source = c("rugbyleagueproject")) {
+                         source = c("rugbyleagueproject", "nrl")) {
   source <- base::match.arg(source)
   league <- base::match.arg(league)
   
   switch(source,
          "rugbyleagueproject" = fetch_ladder_rugbyleagueproject(season = season, league = league),
+         "nrl" = {
+           if (league != "nrl") {
+             cli::cli_abort("Source 'nrl' only supports league = 'nrl'.")
+           }
+           fetch_ladder_nrl(season = season)
+         },
          cli::cli_abort("Unsupported source: {.val {source}}")
   )
 }
@@ -55,12 +62,12 @@ fetch_ladder_rugbyleagueproject <- function(season, league) {
   }
   
   url <- glue::glue("https://www.rugbyleagueproject.org/seasons/{slug}-{season}/summary.html")
+  cli::cli_inform("Fetching {league} ladder for {season}...")
   
-  cli::cli_inform(paste0("Fetching ", league, " ladder for ", season, "..."))
   page <- tryCatch(
     rvest::read_html(url),
     error = function(e) {
-      cli::cli_warn(paste0("Failed to read ladder page for ", league, ", ", season, "."))
+      cli::cli_warn("Failed to read ladder page for {league}, {season}.")
       return(NULL)
     }
   )
@@ -105,26 +112,75 @@ fetch_ladder_rugbyleagueproject <- function(season, league) {
     )
   }
   
-  # Manually map rows to tibble and combine (instead of purrr::map_dfr)
   list_tbls <- vector("list", length(rows))
   for (i in seq_along(rows)) {
     list_tbls[[i]] <- extract_row(rows[[i]])
   }
-  # Remove NULL elements if any
   list_tbls <- Filter(Negate(is.null), list_tbls)
   raw_tbl <- dplyr::bind_rows(list_tbls)
   
-  # Clean character columns: remove commas
   char_cols <- sapply(raw_tbl, is.character)
   for (colname in names(char_cols)[char_cols]) {
     raw_tbl[[colname]] <- stringr::str_replace_all(raw_tbl[[colname]], ",", "")
   }
   
-  # Convert all except 'team' and 'league' to numeric suppressing warnings
   exclude_cols <- c("team", "league")
   for (colname in setdiff(names(raw_tbl), exclude_cols)) {
     raw_tbl[[colname]] <- suppressWarnings(as.numeric(raw_tbl[[colname]]))
   }
   
   return(raw_tbl)
+}
+
+#' Fetch NRL ladder from NRL.com
+#'
+#' @param season Integer. Season year.
+#' @param round_number Optional integer. Defaults to latest round if NULL.
+#' @param comp Integer. Competition ID (default 111 for NRL).
+#'
+#' @return Tibble with ladder standings.
+#' @export
+fetch_ladder_nrl <- function(season, round_number = NULL, comp = 111) {
+  current_year <- as.integer(format(Sys.Date(), "%Y"))
+  if (!season %in% 2000:current_year) {
+    cli::cli_abort("Season must be between 2000 and {current_year}.")
+  }
+  
+  comp_name <- match_comp_name(comp)
+  if (is.null(round_number)) round_number <- ""
+  
+  cli::cli_inform("Fetching {comp_name} ladder for season {season}...")
+  
+  url <- glue::glue("https://www.nrl.com/ladder/?competition={comp}&round={round_number}&season={season}")
+  page <- tryCatch(
+    rvest::read_html(url),
+    error = function(e) {
+      cli::cli_warn("Failed to read ladder page for {comp_name}, season {season}.")
+      return(NULL)
+    }
+  )
+  if (is.null(page)) return(NULL)
+  
+  json_raw <- rvest::html_attr(rvest::html_node(page, "#vue-ladder"), "q-data")
+  data_list <- jsonlite::fromJSON(json_raw)
+  positions <- data_list[["positions"]]
+  
+  ladder <- dplyr::transmute(
+    positions,
+    comp = comp_name,
+    team = .data$teamNickname,
+    played = .data$stats$played,
+    wins = .data$stats$wins,
+    draws = .data$stats$drawn,
+    losses = .data$stats$lost,
+    byes = .data$stats$byes,
+    points_for = .data$stats$points.for,
+    points_against = .data$stats$points.against,
+    points_diff = .data$stats$points.difference,
+    points = .data$stats$points,
+    streak = .data$stats$streak,
+    form = .data$stats$form
+  )
+  
+  return(ladder)
 }

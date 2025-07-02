@@ -8,7 +8,7 @@ fetch_ladder(
   season,
   league = c("nrl", "super_league", "championship", "league_one", "womens_super_league",
     "qld_cup", "nsw_cup", "state_of_origin", "challenge_cup", "1895_cup"),
-  source = c("rugbyleagueproject")
+  source = c("rugbyleagueproject", "nrl")
 )
 }
 \arguments{
@@ -17,7 +17,7 @@ fetch_ladder(
 \item{league}{Character. One of: "nrl", "super_league", "championship", "league_one",
 "womens_super_league", "qld_cup", "nsw_cup", "state_of_origin", "challenge_cup", "1895_cup".}
 
-\item{source}{Character. Currently only "rugbyleagueproject" supported.}
+\item{source}{Character. Either "rugbyleagueproject" or "nrl".}
 }
 \value{
 A tibble with ladder standings and statistics.
@@ -26,5 +26,6 @@ A tibble with ladder standings and statistics.
 Fetches ladder standings for a given season and league from a specified source.
 }
 \examples{
+fetch_ladder(2025, league = "nrl", source = "nrl")
 fetch_ladder(2024, league = "super_league")
 }
