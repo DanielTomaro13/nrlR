@@ -15,19 +15,18 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: false
 Depends: R (>= 4.1.0)
-Imports:
-    rvest,
-    httr,
-    dplyr,
-    purrr,
-    tibble,
-    stringr,
-    glue,
-    cli,
-    xml2,
-    readr,
-    lubridate,
-    jsonlite
+Imports: 
+  rvest,
+  dplyr,
+  httr,
+  purrr,
+  tibble,
+  stringr,
+  glue,
+  cli,
+  xml2,
+  lubridate,
+  jsonlite
 URL: https://github.com/DanielTomaro13/nrlR
 BugReports: https://github.com/DanielTomaro13/nrlR/issues
 RoxygenNote: 7.3.2

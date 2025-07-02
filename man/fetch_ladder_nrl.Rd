@@ -2,20 +2,20 @@
 % Please edit documentation in R/fetch_ladder.R
 \name{fetch_ladder_nrl}
 \alias{fetch_ladder_nrl}
-\title{Fetch NRL ladder from NRL.com}
+\title{Fetch NRL Ladder for a Given Season and Round}
 \usage{
 fetch_ladder_nrl(season, round_number = NULL, comp = 111)
 }
 \arguments{
-\item{season}{Integer. Season year.}
+\item{season}{Integer scalar. Season year (e.g. 2025).}
 
-\item{round_number}{Optional integer. Defaults to latest round if NULL.}
+\item{round_number}{Integer scalar or NULL. Round number (e.g. 4). If NULL, fetches current ladder.}
 
-\item{comp}{Integer. Competition ID (default 111 for NRL).}
+\item{comp}{Integer scalar. Competition ID (default 111 for Telstra Premiership).}
 }
 \value{
-Tibble with ladder standings.
+A tibble with ladder positions and stats.
 }
 \description{
-Fetch NRL ladder from NRL.com
+Retrieves the NRL ladder (standings) for a specified season and optionally round.
 }

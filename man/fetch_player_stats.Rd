@@ -2,29 +2,36 @@
 % Please edit documentation in R/fetch_player_stats.R
 \name{fetch_player_stats}
 \alias{fetch_player_stats}
-\title{Fetch Rugby League Player Stats by Match}
+\title{Fetch Player Stats from Multiple Rugby League Sources}
 \usage{
 fetch_player_stats(
-  seasons,
+  season = NULL,
   league = c("nrl", "super_league", "championship", "league_one", "womens_super_league",
     "qld_cup", "nsw_cup"),
-  rounds = 1:30,
-  save_dir = NULL
+  round = NULL,
+  comp = NULL,
+  source = c("championdata", "rugbyproject")
 )
 }
 \arguments{
-\item{seasons}{Integer vector. One or more seasons to fetch (from 1998 onward).}
+\item{season}{Integer scalar. Season year (rugbyproject only).}
 
-\item{league}{Character. One of: "nrl", "super_league", "championship", "league_one",
-"womens_super_league", "qld_cup", "nsw_cup".}
+\item{league}{Character scalar. League name (rugbyproject only).}
 
-\item{rounds}{Integer vector. Which rounds to include (default 1:30).}
+\item{round}{Integer scalar or NULL. Round number filter (both sources).}
 
-\item{save_dir}{Character. Directory to save .rds files (optional).}
+\item{comp}{Integer. Competition ID (championdata only).}
+
+\item{source}{Character scalar. One of "championdata" or "rugbyproject". Default is "championdata".}
 }
 \value{
-Saves .rds files by season or returns a combined tibble if `save_dir` is NULL.
+A tibble of player stats joined with fixture info.
 }
 \description{
-Main wrapper to fetch player stats for one or more seasons and rounds.
+Unified wrapper to fetch player stats from either Champion Data MC API (NRL/NRLW/State of Origin)
+or Rugby League Project web scraping.
+}
+\details{
+For `source = "championdata"`, provide `comp` (competition ID). `round` is optional.
+For `source = "rugbyproject"`, provide `season`, `league`, and optionally `round`.
 }

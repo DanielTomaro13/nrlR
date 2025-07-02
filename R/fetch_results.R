@@ -109,7 +109,6 @@ fetch_results_rugbyproject <- function(seasons, league) {
     )
     raw_data$date <- as.Date(parsed_dates)
     
-    # fill missing dates down
     idx <- which(!is.na(raw_data$date))
     for (i in seq_along(raw_data$date)) {
       if (is.na(raw_data$date[i]) && length(idx) > 0) {
@@ -118,7 +117,6 @@ fetch_results_rugbyproject <- function(seasons, league) {
       }
     }
     
-    # adjust using weekday from time
     raw_data$weekday_str <- stringr::str_sub(raw_data$time, 1, 3)
     target_days <- c("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
     adjusted_dates <- raw_data$date
@@ -132,25 +130,19 @@ fetch_results_rugbyproject <- function(seasons, league) {
     }
     raw_data$date <- adjusted_dates
     
-    # calculate round
     round_vec <- integer(length = nrow(raw_data))
     current_round <- 1
-    prev_month_day <- NA_character_
     for (i in seq_along(raw_data$date_raw)) {
       if (stringr::str_detect(raw_data$date_raw[i], "[A-Za-z]")) {
-        prev_month_day <- raw_data$date_raw[i]
         if (i > 1) current_round <- current_round + 1
       }
       round_vec[i] <- current_round
     }
     raw_data$round <- round_vec
     
-    raw_data <- dplyr::select(
-      raw_data,
-      .data$season, .data$league, .data$round, .data$date, .data$time,
-      .data$home_team, .data$home_score, .data$away_team, .data$away_score,
-      .data$referee, .data$venue, .data$attendance
-    )
+    raw_data <- raw_data[, c("season", "league", "round", "date", "time",
+                             "home_team", "home_score", "away_team", "away_score",
+                             "referee", "venue", "attendance"), drop = FALSE]
     
     all_results[[length(all_results) + 1]] <- raw_data
   }
@@ -158,5 +150,3 @@ fetch_results_rugbyproject <- function(seasons, league) {
   results <- dplyr::bind_rows(all_results)
   return(results)
 }
-
-
