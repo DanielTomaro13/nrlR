@@ -1,5 +1,9 @@
 # nrlR News
 
+## Improvements
+Added advanced statistics that are avaliable via NRL.com. This includes advanced player and team statistics which are supplied to 
+NRL.com via Champion Data
+
 ## Improvements 2/07/2025
 
 Added a fetch_fixtures function which scrapes NRL.com draw for future fixtures and past results
