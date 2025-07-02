@@ -4,7 +4,8 @@
 #'
 #' @param season Integer. Season year (1998 or later).
 #' @param league Character. One of: "nrl", "super_league", "championship", "league_one",
-#'   "womens_super_league", "qld_cup", "nsw_cup", "state_of_origin", "challenge_cup", "1895_cup".
+#'   "womens_super_league", "qld_cup", "nsw_cup",
+#'   "state_of_origin", "challenge_cup", "1895_cup".
 #' @param source Character. Either "rugbyleagueproject" or "nrl".
 #'
 #' @return A tibble with ladder standings and statistics.
@@ -62,12 +63,12 @@ fetch_ladder_rugbyleagueproject <- function(season, league) {
   }
   
   url <- glue::glue("https://www.rugbyleagueproject.org/seasons/{slug}-{season}/summary.html")
-  cli::cli_inform("Fetching {league} ladder for {season}...")
+  cli::cli_inform(glue::glue("Fetching {league} ladder for {season}..."))
   
   page <- tryCatch(
     rvest::read_html(url),
     error = function(e) {
-      cli::cli_warn("Failed to read ladder page for {league}, {season}.")
+      cli::cli_warn(glue::glue("Failed to read ladder page for {league}, {season}."))
       return(NULL)
     }
   )
@@ -132,55 +133,92 @@ fetch_ladder_rugbyleagueproject <- function(season, league) {
   return(raw_tbl)
 }
 
-#' Fetch NRL ladder from NRL.com
+#' Fetch NRL Ladder for a Given Season and Round
 #'
-#' @param season Integer. Season year.
-#' @param round_number Optional integer. Defaults to latest round if NULL.
-#' @param comp Integer. Competition ID (default 111 for NRL).
+#' Retrieves the NRL ladder (standings) for a specified season and optionally round.
 #'
-#' @return Tibble with ladder standings.
+#' @param season Integer scalar. Season year (e.g. 2025).
+#' @param round_number Integer scalar or NULL. Round number (e.g. 4). If NULL, fetches current ladder.
+#' @param comp Integer scalar. Competition ID (default 111 for Telstra Premiership).
+#'
+#' @return A tibble with ladder positions and stats.
 #' @export
 fetch_ladder_nrl <- function(season, round_number = NULL, comp = 111) {
   current_year <- as.integer(format(Sys.Date(), "%Y"))
-  if (!season %in% 2000:current_year) {
-    cli::cli_abort("Season must be between 2000 and {current_year}.")
+  
+  if (!(season %in% 2000:current_year)) {
+    cli::cli_abort(paste0("Season must be between 2000 and ", current_year, "."))
   }
   
   comp_name <- match_comp_name(comp)
-  if (is.null(round_number)) round_number <- ""
   
-  cli::cli_inform("Fetching {comp_name} ladder for season {season}...")
+  if (is.null(round_number)) {
+    round_number <- ""
+  }
+  
+  cli::cli_inform(glue::glue("Fetching {comp_name} ladder for season {season}..."))
   
   url <- glue::glue("https://www.nrl.com/ladder/?competition={comp}&round={round_number}&season={season}")
+  
   page <- tryCatch(
     rvest::read_html(url),
     error = function(e) {
-      cli::cli_warn("Failed to read ladder page for {comp_name}, season {season}.")
+      cli::cli_warn(glue::glue("Failed to read ladder page for {comp_name}, season {season}."))
       return(NULL)
     }
   )
-  if (is.null(page)) return(NULL)
+  if (is.null(page)) {
+    return(tibble::tibble())
+  }
   
   json_raw <- rvest::html_attr(rvest::html_node(page, "#vue-ladder"), "q-data")
+  
+  if (is.null(json_raw)) {
+    cli::cli_warn(glue::glue("No ladder data found for {comp_name}, season {season}."))
+    return(tibble::tibble())
+  }
+  
   data_list <- jsonlite::fromJSON(json_raw)
   positions <- data_list[["positions"]]
   
-  ladder <- dplyr::transmute(
-    positions,
-    comp = comp_name,
-    team = .data$teamNickname,
-    played = .data$stats$played,
-    wins = .data$stats$wins,
-    draws = .data$stats$drawn,
-    losses = .data$stats$lost,
-    byes = .data$stats$byes,
-    points_for = .data$stats$points.for,
-    points_against = .data$stats$points.against,
-    points_diff = .data$stats$points.difference,
-    points = .data$stats$points,
-    streak = .data$stats$streak,
-    form = .data$stats$form
+  ladder <- data.frame(
+    comp = rep(comp_name, nrow(positions)),
+    team = positions$teamNickname,
+    played = positions$stats$played,
+    wins = positions$stats$wins,
+    draws = positions$stats$drawn,
+    losses = positions$stats$lost,
+    byes = positions$stats$byes,
+    points_for = positions$stats[["points for"]],
+    points_against = positions$stats[["points against"]],
+    points_diff = positions$stats[["points difference"]],
+    points = positions$stats$points,
+    streak = positions$stats$streak,
+    form = positions$stats$form,
+    stringsAsFactors = FALSE
   )
   
   return(ladder)
+}
+
+#' Helper: Match Competition Name from ID
+#'
+#' @param comp Integer. Competition ID.
+#' @return Character. Competition name.
+#' @noRd
+match_comp_name <- function(comp) {
+  # Example mapping, expand as needed
+  comp_map <- list(
+    "111" = "Telstra Premiership",
+    "123" = "NRLW",
+    "124" = "State of Origin"
+  )
+  
+  comp_chr <- as.character(comp)
+  if (comp_chr %in% names(comp_map)) {
+    return(comp_map[[comp_chr]])
+  }
+  
+  # Default fallback
+  paste("Competition", comp)
 }

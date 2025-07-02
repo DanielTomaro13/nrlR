@@ -102,16 +102,14 @@ fetch_venues_rugbyleagueproject <- function(season, league) {
   )
   base::colnames(venues_df)[seq_along(expected_cols)] <- expected_cols[seq_along(expected_cols)]
   
-  venues_df <- dplyr::mutate(venues_df,
-                             season = season,
-                             league = league,
-                             venue_link = venue_links
-  )
+  venues_df$season <- season
+  venues_df$league <- league
+  venues_df$venue_link <- venue_links
   
-  venues_df <- dplyr::relocate(venues_df,
-                               .data$season, .data$league, .data$venue, .data$home_team, .data$location, .data$country,
-                               .data$games, .data$avg_attendance, .data$max_attendance, .data$total_attendance, .data$venue_link
-  )
+  
+  venues_df <- venues_df[, c("season", "league", "venue", "home_team", "location", "country",
+                             "games", "avg_attendance", "max_attendance", "total_attendance", "venue_link")]
+  
   
   return(venues_df)
 }

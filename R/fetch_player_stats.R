@@ -1,49 +1,191 @@
-#' Fetch Rugby League Player Stats by Match
+#' Fetch Player Stats from Multiple Rugby League Sources
 #'
-#' Main wrapper to fetch player stats for one or more seasons and rounds.
+#' Unified wrapper to fetch player stats from either Champion Data MC API (NRL/NRLW/State of Origin)
+#' or Rugby League Project web scraping.
 #'
-#' @param seasons Integer vector. One or more seasons to fetch (from 1998 onward).
-#' @param league Character. One of: "nrl", "super_league", "championship", "league_one",
-#'   "womens_super_league", "qld_cup", "nsw_cup".
-#' @param rounds Integer vector. Which rounds to include (default 1:30).
-#' @param save_dir Character. Directory to save .rds files (optional).
+#' For `source = "championdata"`, provide `comp` (competition ID). `round` is optional.
+#' For `source = "rugbyproject"`, provide `season`, `league`, and optionally `round`.
 #'
-#' @return Saves .rds files by season or returns a combined tibble if `save_dir` is NULL.
+#' @param season Integer scalar. Season year (rugbyproject only).
+#' @param league Character scalar. League name (rugbyproject only).
+#' @param round Integer scalar or NULL. Round number filter (both sources).
+#' @param comp Integer. Competition ID (championdata only).
+#' @param source Character scalar. One of "championdata" or "rugbyproject". Default is "championdata".
+#'
+#' @return A tibble of player stats joined with fixture info.
 #' @export
-fetch_player_stats <- function(seasons,
+fetch_player_stats <- function(season = NULL,
                                league = c("nrl", "super_league", "championship", "league_one",
                                           "womens_super_league", "qld_cup", "nsw_cup"),
-                               rounds = 1:30,
-                               save_dir = NULL) {
-  league <- base::match.arg(league)
-  current_year <- as.integer(format(Sys.Date(), "%Y"))
+                               round = NULL,
+                               comp = NULL,
+                               source = c("championdata", "rugbyproject")) {
   
-  if (any(!seasons %in% 1998:current_year)) {
-    cli::cli_abort(paste0("All seasons must be between 1998 and ", current_year, "."))
-  }
+  source <- match.arg(source)
   
-  if (is.null(save_dir)) {
-    return(fetch_player_stats_rugbyproject(seasons, league, rounds))
-  } else {
-    for (season in seasons) {
-      stats <- fetch_player_stats_rugbyproject(season, league, rounds)
-      dir.create(save_dir, showWarnings = FALSE, recursive = TRUE)
-      file_path <- file.path(save_dir, paste0("player_stats_", league, "_", season, ".rds"))
-      readr::write_rds(stats, file_path)
-      cli::cli_inform(paste0("Saved ", nrow(stats), " rows to ", file_path))
+  if (source == "rugbyproject") {
+    league <- match.arg(league)
+    current_year <- as.integer(format(Sys.Date(), "%Y"))
+    if (is.null(season)) {
+      stop("Please provide a 'season' for rugbyproject source.", call. = FALSE)
     }
-    invisible(NULL)
+    if (!season %in% 1998:current_year) {
+      stop(paste0("Season must be between 1998 and ", current_year, "."), call. = FALSE)
+    }
+    seasons <- c(season)
+    rounds <- if (is.null(round)) 1:30 else c(round)
+    return(fetch_player_stats_rugbyproject(seasons, league, rounds))
   }
+  
+  if (source == "championdata") {
+    if (is.null(comp)) {
+      stop("Parameter 'comp' (competition ID) is required for Champion Data source.", call. = FALSE)
+    }
+    return(fetch_player_stats_championdata(comp = comp, round = round))
+  }
+  
+  stop("Unsupported source: ", source, call. = FALSE)
 }
 
-#' Internal: Fetch Rugby League Player Stats from Rugby League Project
+#' Fetch Champion Data Player Stats for Competition
 #'
-#' @param seasons Integer vector (can be length 1).
-#' @param league Character scalar.
-#' @param rounds Integer vector.
-#' @return A tibble of player stats.
+#' Fetches player stats for the given Champion Data competition ID. Use fetch_cd_competitions for all ids.
+#' If round is provided, filters fixtures to that round.
+#' Otherwise fetches all completed matches available.
+#'
+#' @param comp Integer. Competition ID (required).
+#' @param round Integer or NULL. Round filter (optional).
+#'
+#' @return Tibble of player stats joined with fixture info.
+#' @export
+fetch_player_stats_championdata <- function(comp, round = NULL) {
+  if (missing(comp)) {
+    stop("Parameter 'comp' (competition ID) is required.", call. = FALSE)
+  }
+  
+  competitions_df <- get_competitions()
+  
+  if (!(comp %in% competitions_df$id)) {
+    stop("Competition ID ", comp, " not found in available competitions.", call. = FALSE)
+  }
+  
+  fixtures <- get_fixtures(comp)
+  
+  if (!is.null(round)) {
+    fixtures <- fixtures[fixtures$roundNumber == round, , drop = FALSE]
+  }
+  
+  fixtures <- fixtures[fixtures$matchStatus == "complete", , drop = FALSE]
+  
+  if (nrow(fixtures) == 0L) {
+    stop("No completed matches found for competition ", comp,
+         if (!is.null(round)) paste0(", round ", round), ".", call. = FALSE)
+  }
+  
+  player_stats <- get_player_stats_for_fixtures(fixtures, comp)
+  
+  if (nrow(player_stats) == 0L) {
+    message("No player stats found for competition ", comp, ".")
+    return(tibble::tibble())
+  }
+  
+  joined <- dplyr::left_join(
+    player_stats,
+    fixtures[, c("matchId", "competition_id", "roundNumber", "homeSquadName", 
+                 "awaySquadName", "matchStatus", "utcStartTime"), drop = FALSE],
+    by = c("match_id" = "matchId", "competition_id")
+  )
+  
+  names(joined)[names(joined) == "roundNumber"] <- "round"
+  names(joined)[names(joined) == "homeSquadName"] <- "home_team"
+  names(joined)[names(joined) == "awaySquadName"] <- "away_team"
+  names(joined)[names(joined) == "matchStatus"] <- "match_status"
+  names(joined)[names(joined) == "utcStartTime"] <- "utc_start"
+  
+  return(joined)
+}
+
+#' Internal: Get Competitions List from Champion Data API
+#'
+#' @return Tibble of competitions data.
 #' @noRd
-fetch_player_stats_rugbyproject <- function(seasons, league, rounds) {
+get_competitions <- function() {
+  comps_url <- "https://mc.championdata.com/data/competitions.json"
+  competitions_raw <- jsonlite::fromJSON(comps_url)
+  tibble::as_tibble(competitions_raw[["competitionDetails"]]$competition)
+}
+
+#' Internal: Get Fixtures for a Competition
+#'
+#' @param comp Integer. Competition ID.
+#'
+#' @return Tibble of fixture data.
+#' @noRd
+get_fixtures <- function(comp) {
+  url_fixtures <- glue::glue("https://mc.championdata.com/data/{comp}/fixture.json")
+  fixture_json <- tryCatch(jsonlite::fromJSON(url_fixtures), error = function(e) NULL)
+  
+  if (is.null(fixture_json$fixture$match)) {
+    stop("No fixtures found for competition ", comp, ".", call. = FALSE)
+  }
+  
+  fixtures <- tibble::as_tibble(fixture_json$fixture$match)
+  fixtures$competition_id <- comp
+  return(fixtures)
+}
+
+#' Internal: Fetch Player Stats for Given Fixtures
+#'
+#' @param fixtures Tibble of fixture data.
+#' @param comp Integer. Competition ID.
+#'
+#' @return Tibble of player stats.
+#' @noRd
+get_player_stats_for_fixtures <- function(fixtures, comp) {
+  player_stats_list <- vector("list", length = nrow(fixtures))
+  
+  for (i in seq_len(nrow(fixtures))) {
+    match_id <- fixtures$matchId[i]
+    url_match <- glue::glue("https://mc.championdata.com/data/{comp}/{match_id}.json")
+    
+    match_data <- tryCatch(jsonlite::fromJSON(url_match), error = function(e) NULL)
+    if (is.null(match_data) || is.null(match_data$matchStats)) next
+    
+    ps <- NULL
+    if ("playerStats" %in% names(match_data$matchStats) &&
+        "player" %in% names(match_data$matchStats$playerStats) &&
+        length(match_data$matchStats$playerStats$player) > 0L) {
+      ps <- tibble::as_tibble(match_data$matchStats$playerStats$player)
+      
+      if ("playerInfo" %in% names(match_data$matchStats) &&
+          "player" %in% names(match_data$matchStats$playerInfo) &&
+          length(match_data$matchStats$playerInfo$player) > 0L) {
+        player_info <- tibble::as_tibble(match_data$matchStats$playerInfo$player)
+        player_info <- player_info[, c("playerId", "firstname", "surname", 
+                                       "shortDisplayName", "displayName"), drop = FALSE]
+        ps <- dplyr::left_join(ps, player_info, by = "playerId")
+      }
+      ps$match_id <- match_id
+      ps$competition_id <- comp
+    }
+    
+    player_stats_list[[i]] <- ps
+  }
+  
+  dplyr::bind_rows(player_stats_list)
+}
+
+#' Internal: Fetch Rugby League Project Player Stats
+#'
+#' Fetch player stats from Rugby League Project website by scraping match pages.
+#'
+#' @param seasons Integer vector. Seasons to fetch.
+#' @param league Character scalar. League name.
+#' @param rounds Integer vector. Rounds to fetch.
+#'
+#' @return Tibble of player stats.
+#' @noRd
+fetch_player_stats_rugbyproject <- function(seasons, league, rounds = 1:30) {
   league_team_slugs <- list(
     nrl = c(
       "brisbane-broncos", "canberra-raiders", "canterbury-bankstown-bulldogs",
@@ -53,7 +195,6 @@ fetch_player_stats_rugbyproject <- function(seasons, league, rounds) {
       "penrith-panthers", "south-sydney-rabbitohs", "st-george-illa-dragons",
       "sydney-roosters", "wests-tigers"
     )
-    # Add other leagues here...
   )
   
   if (is.null(league_team_slugs[[league]])) {
@@ -67,7 +208,7 @@ fetch_player_stats_rugbyproject <- function(seasons, league, rounds) {
     teams_in_url <- strsplit(slug, "-vs-")[[1]]
     team_names <- stringr::str_to_title(gsub("-", " ", teams_in_url))
     
-    page <- tryCatch(xml2::read_html(url), error = function(e) return(NULL))
+    page <- tryCatch(xml2::read_html(url), error = function(e) NULL)
     if (is.null(page)) return(NULL)
     
     tables <- rvest::html_elements(page, "table.list")
@@ -80,7 +221,7 @@ fetch_player_stats_rugbyproject <- function(seasons, league, rounds) {
       
       data <- lapply(rows, function(row) {
         cells <- rvest::html_elements(row, "td")
-        sapply(cells, rvest::html_text, trim = TRUE)
+        vapply(cells, rvest::html_text, character(1), trim = TRUE)
       })
       
       data <- Filter(function(x) length(x) >= 6, data)
@@ -102,7 +243,7 @@ fetch_player_stats_rugbyproject <- function(seasons, league, rounds) {
       })
       
       combined <- dplyr::bind_rows(tbl_rows)
-      dplyr::filter(combined, .data$player != "total" & .data$player != "Total")
+      combined[!(combined$player %in% c("total", "Total")), , drop = FALSE]
     }
     
     tbl1 <- extract_table(tables[[1]], team_names[1])
@@ -114,38 +255,34 @@ fetch_player_stats_rugbyproject <- function(seasons, league, rounds) {
   check_url_exists <- function(url) {
     res <- tryCatch(httr::HEAD(url, httr::timeout(5)), error = function(e) NULL)
     if (is.null(res)) return(FALSE)
-    res$status_code == 200
+    res$status_code == 200L
   }
   
-  all_data_list <- lapply(seasons, function(season) {
+  all_data_list <- list()
+  for (season in seasons) {
     matchups <- expand.grid(
       round = rounds,
       team_a = teams,
       team_b = teams,
       stringsAsFactors = FALSE
     )
-    
-    matchups <- dplyr::filter(matchups, .data$team_a != .data$team_b)
-    
+    matchups <- matchups[matchups$team_a != matchups$team_b, , drop = FALSE]
     matchups$slug <- mapply(function(a, b) paste0(a, "-vs-", b),
                             matchups$team_a, matchups$team_b,
                             USE.NAMES = FALSE)
-    
     matchups$url <- mapply(function(rnd, slg) {
       glue::glue("https://www.rugbyleagueproject.org/seasons/{league}-{season}/round-{rnd}/{slg}/stats.html")
     }, matchups$round, matchups$slug, USE.NAMES = FALSE)
     
-    exists_vec <- sapply(matchups$url, check_url_exists)
-    matchups <- dplyr::filter(matchups, exists_vec)
+    exists_vec <- vapply(matchups$url, check_url_exists, logical(1))
+    matchups <- matchups[exists_vec, , drop = FALSE]
     
     cli::cli_inform(paste0("Found ", nrow(matchups), " valid matches for ", league, " ", season))
     
-    match_data <- Map(scrape_match, matchups$url, matchups$round, MoreArgs = list(season = season))
-    dplyr::bind_rows(match_data)
-  })
+    match_data <- mapply(scrape_match, matchups$url, matchups$round, 
+                         MoreArgs = list(season = season), SIMPLIFY = FALSE)
+    all_data_list[[as.character(season)]] <- dplyr::bind_rows(match_data)
+  }
   
   dplyr::bind_rows(all_data_list)
 }
-
-# Avoid CRAN NOTE: declare global binding
-utils::globalVariables(c(".data"))
