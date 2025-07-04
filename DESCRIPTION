@@ -30,8 +30,7 @@ Imports:
     tibble,
     glue,
     cli,
-    lubridate,
-    readr
+    lubridate
 Suggests: 
     testthat,
     knitr,
