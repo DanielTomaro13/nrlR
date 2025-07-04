@@ -3,31 +3,38 @@ Type: Package
 Title: Access and Analyze Rugby League Data from Rugby League Project
 Version: 0.1.0
 Authors@R: 
-    person(given = "Daniel",  
-           family = "Tomaro",  
-           email = "danieltomaro@icloud.com",  
+    person(given = "Daniel", 
+           family = "Tomaro", 
+           email = "danieltomaro@icloud.com", 
            role = c("aut", "cre"))
 Maintainer: Daniel Tomaro <danieltomaro@icloud.com>
-Description: Tools for scraping and analyzing rugby league data. 
- Includes data from multiple leagues including the 'NRL', Super League, 
- 'NSW' Cup, 'QLD' Cup, and more.
+Description: Provides a set of functions to scrape and analyze rugby league data from 
+    the Rugby League Project website. Supports competitions including the National Rugby League 
+    (NRL), New South Wales Cup (NSW Cup), Queensland Cup (QLD Cup), Super League, 
+    and various representative and women's competitions. Includes functions to fetch 
+    player statistics, match results, ladders, venues, and coaching data. Designed to 
+    assist analysts, fans, and researchers in exploring historical and current rugby league data.
 License: MIT + file LICENSE
 Encoding: UTF-8
-LazyData: false
-Depends: R (>= 4.1.0)
+LazyData: true
+RoxygenNote: 7.3.2
+Depends: R (>= 3.5.0)
 Imports:
-    rvest,
-    httr,
     dplyr,
     purrr,
-    tibble,
+    httr,
+    jsonlite,
+    rvest,
+    xml2,
     stringr,
+    tibble,
     glue,
     cli,
-    xml2,
-    readr,
     lubridate,
-    jsonlite
-URL: https://github.com/DanielTomaro13/nrlR
-BugReports: https://github.com/DanielTomaro13/nrlR/issues
-RoxygenNote: 7.3.2
+    readr
+Suggests: 
+    testthat,
+    knitr,
+    rmarkdown
+Config/testthat/edition: 3
+VignetteBuilder: knitr
