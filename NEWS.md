@@ -1,5 +1,8 @@
 # nrlR News
 
+## Imrprovements 08/07/2025
+Added a fetch injuries and suspensions function from ZeroTackle - only gets up to date information at the moment but that is all that should be needed for now
+
 ## Improvements
 Added advanced statistics that are avaliable via NRL.com. This includes advanced player and team statistics which are supplied to 
 NRL.com via Champion Data
