@@ -1,6 +1,6 @@
 Package: nrlR
 Type: Package
-Title: Access and Analyze Rugby League Data from Rugby League Project
+Title: Functions to scrape rugby data
 Version: 0.1.0
 Authors@R: 
     person(given = "Daniel", 
