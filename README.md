@@ -313,7 +313,7 @@ If you use `nrlR` in academic research, please cite:
 
 ```
 Tomaro, D. (2025). nrlR: An R package for rugby league data analysis. 
-R package version 0.1.0. https://github.com/DanielTomaro13/nrlR
+R package version 0.1.1. https://github.com/DanielTomaro13/nrlR
 ```
 
 BibTeX:
@@ -322,7 +322,7 @@ BibTeX:
   title = {nrlR: An R package for rugby league data analysis},
   author = {Daniel Tomaro},
   year = {2025},
-  note = {R package version 0.1.0},
+  note = {R package version 0.1.1},
   url = {https://github.com/DanielTomaro13/nrlR},
 }
 ```
