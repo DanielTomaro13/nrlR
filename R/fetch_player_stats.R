@@ -20,9 +20,9 @@ fetch_player_stats <- function(season = NULL,
                                round = NULL,
                                comp = NULL,
                                source = c("championdata", "rugbyproject")) {
-  
+
   source <- match.arg(source)
-  
+
   if (source == "rugbyproject") {
     league <- match.arg(league)
     current_year <- as.integer(format(Sys.Date(), "%Y"))
@@ -36,14 +36,14 @@ fetch_player_stats <- function(season = NULL,
     rounds <- if (is.null(round)) 1:30 else c(round)
     return(fetch_player_stats_rugbyproject(seasons, league, rounds))
   }
-  
+
   if (source == "championdata") {
     if (is.null(comp)) {
       stop("Parameter 'comp' (competition ID) is required for Champion Data source.", call. = FALSE)
     }
     return(fetch_player_stats_championdata(comp = comp, round = round))
   }
-  
+
   stop("Unsupported source: ", source, call. = FALSE)
 }
 
@@ -62,46 +62,46 @@ fetch_player_stats_championdata <- function(comp, round = NULL) {
   if (missing(comp)) {
     stop("Parameter 'comp' (competition ID) is required.", call. = FALSE)
   }
-  
+
   competitions_df <- get_competitions()
-  
+
   if (!(comp %in% competitions_df$id)) {
     stop("Competition ID ", comp, " not found in available competitions.", call. = FALSE)
   }
-  
+
   fixtures <- get_fixtures(comp)
-  
+
   if (!is.null(round)) {
     fixtures <- fixtures[fixtures$roundNumber == round, , drop = FALSE]
   }
-  
+
   fixtures <- fixtures[fixtures$matchStatus == "complete", , drop = FALSE]
-  
+
   if (nrow(fixtures) == 0L) {
     stop("No completed matches found for competition ", comp,
          if (!is.null(round)) paste0(", round ", round), ".", call. = FALSE)
   }
-  
+
   player_stats <- get_player_stats_for_fixtures(fixtures, comp)
-  
+
   if (nrow(player_stats) == 0L) {
     message("No player stats found for competition ", comp, ".")
     return(tibble::tibble())
   }
-  
+
   joined <- dplyr::left_join(
     player_stats,
-    fixtures[, c("matchId", "competition_id", "roundNumber", "homeSquadName", 
+    fixtures[, c("matchId", "competition_id", "roundNumber", "homeSquadName",
                  "awaySquadName", "matchStatus", "utcStartTime"), drop = FALSE],
     by = c("match_id" = "matchId", "competition_id")
   )
-  
+
   names(joined)[names(joined) == "roundNumber"] <- "round"
   names(joined)[names(joined) == "homeSquadName"] <- "home_team"
   names(joined)[names(joined) == "awaySquadName"] <- "away_team"
   names(joined)[names(joined) == "matchStatus"] <- "match_status"
   names(joined)[names(joined) == "utcStartTime"] <- "utc_start"
-  
+
   return(joined)
 }
 
@@ -124,11 +124,11 @@ get_competitions <- function() {
 get_fixtures <- function(comp) {
   url_fixtures <- glue::glue("https://mc.championdata.com/data/{comp}/fixture.json")
   fixture_json <- tryCatch(jsonlite::fromJSON(url_fixtures), error = function(e) NULL)
-  
+
   if (is.null(fixture_json$fixture$match)) {
     stop("No fixtures found for competition ", comp, ".", call. = FALSE)
   }
-  
+
   fixtures <- tibble::as_tibble(fixture_json$fixture$match)
   fixtures$competition_id <- comp
   return(fixtures)
@@ -143,35 +143,35 @@ get_fixtures <- function(comp) {
 #' @noRd
 get_player_stats_for_fixtures <- function(fixtures, comp) {
   player_stats_list <- vector("list", length = nrow(fixtures))
-  
+
   for (i in seq_len(nrow(fixtures))) {
     match_id <- fixtures$matchId[i]
     url_match <- glue::glue("https://mc.championdata.com/data/{comp}/{match_id}.json")
-    
+
     match_data <- tryCatch(jsonlite::fromJSON(url_match), error = function(e) NULL)
     if (is.null(match_data) || is.null(match_data$matchStats)) next
-    
+
     ps <- NULL
     if ("playerStats" %in% names(match_data$matchStats) &&
         "player" %in% names(match_data$matchStats$playerStats) &&
         length(match_data$matchStats$playerStats$player) > 0L) {
       ps <- tibble::as_tibble(match_data$matchStats$playerStats$player)
-      
+
       if ("playerInfo" %in% names(match_data$matchStats) &&
           "player" %in% names(match_data$matchStats$playerInfo) &&
           length(match_data$matchStats$playerInfo$player) > 0L) {
         player_info <- tibble::as_tibble(match_data$matchStats$playerInfo$player)
-        player_info <- player_info[, c("playerId", "firstname", "surname", 
+        player_info <- player_info[, c("playerId", "firstname", "surname",
                                        "shortDisplayName", "displayName"), drop = FALSE]
         ps <- dplyr::left_join(ps, player_info, by = "playerId")
       }
       ps$match_id <- match_id
       ps$competition_id <- comp
     }
-    
+
     player_stats_list[[i]] <- ps
   }
-  
+
   dplyr::bind_rows(player_stats_list)
 }
 
@@ -189,34 +189,34 @@ fetch_team_stats_championdata <- function(comp, round = NULL) {
   if (missing(comp)) {
     stop("Parameter 'comp' (competition ID) is required.", call. = FALSE)
   }
-  
+
   competitions_df <- get_competitions()
   if (!(comp %in% competitions_df$id)) {
     stop("Competition ID ", comp, " not found in available competitions.", call. = FALSE)
   }
-  
+
   fixtures <- get_fixtures(comp)
-  
+
   if (!is.null(round)) {
     fixtures <- fixtures[fixtures$roundNumber == round, , drop = FALSE]
   }
-  
+
   fixtures <- fixtures[fixtures$matchStatus == "complete", , drop = FALSE]
-  
+
   if (nrow(fixtures) == 0L) {
     stop("No completed matches found for competition ", comp,
          if (!is.null(round)) paste0(", round ", round), ".", call. = FALSE)
   }
-  
+
   team_stats_list <- vector("list", length = nrow(fixtures))
-  
+
   for (i in seq_len(nrow(fixtures))) {
     match_id <- fixtures$matchId[i]
     url_match <- glue::glue("https://mc.championdata.com/data/{comp}/{match_id}.json")
-    
+
     match_data <- tryCatch(jsonlite::fromJSON(url_match), error = function(e) NULL)
     if (is.null(match_data) || is.null(match_data$matchStats)) next
-    
+
     ts <- NULL
     if ("teamStats" %in% names(match_data$matchStats) &&
         "team" %in% names(match_data$matchStats$teamStats) &&
@@ -225,31 +225,49 @@ fetch_team_stats_championdata <- function(comp, round = NULL) {
       ts$match_id <- match_id
       ts$competition_id <- comp
     }
-    
+
     team_stats_list[[i]] <- ts
   }
-  
+
   team_stats <- dplyr::bind_rows(team_stats_list)
-  
+
   if (nrow(team_stats) == 0L) {
     message("No team stats found for competition ", comp, ".")
     return(tibble::tibble())
   }
-  
-  # Join with fixture info
+
+  # FIX: Use Squad IDs from fixture data to reliably map team names, as row order is not guaranteed.
+  fixture_map <- fixtures[, c("matchId", "competition_id", "roundNumber",
+                              "homeSquadName", "awaySquadName", "matchStatus",
+                              "utcStartTime", "homeSquadId", "awaySquadId"), drop = FALSE]
+
   joined <- dplyr::left_join(
     team_stats,
-    fixtures[, c("matchId", "competition_id", "roundNumber", "homeSquadName", 
-                 "awaySquadName", "matchStatus", "utcStartTime"), drop = FALSE],
+    fixture_map,
     by = c("match_id" = "matchId", "competition_id")
   )
-  
-  names(joined)[names(joined) == "roundNumber"] <- "round"
-  names(joined)[names(joined) == "homeSquadName"] <- "home_team"
-  names(joined)[names(joined) == "awaySquadName"] <- "away_team"
-  names(joined)[names(joined) == "matchStatus"] <- "match_status"
-  names(joined)[names(joined) == "utcStartTime"] <- "utc_start"
-  
+
+  joined <- dplyr::mutate(
+    joined,
+    team = dplyr::case_when(
+      squadId == homeSquadId ~ homeSquadName,
+      squadId == awaySquadId ~ awaySquadName,
+      TRUE ~ NA_character_
+    )
+  )
+
+  joined <- joined %>%
+    dplyr::rename(
+      round = roundNumber,
+      home_team = homeSquadName,
+      away_team = awaySquadName,
+      match_status = matchStatus,
+      utc_start = utcStartTime
+    ) %>%
+    dplyr::select(
+      -c(homeSquadId, awaySquadId)
+    )
+
   return(joined)
 }
 
@@ -275,36 +293,36 @@ fetch_player_stats_rugbyproject <- function(seasons, league, rounds = 1:30) {
       "sydney-roosters", "wests-tigers"
     )
   )
-  
+
   if (is.null(league_team_slugs[[league]])) {
     cli::cli_abort(paste0("No team slug list defined for ", league, "."))
   }
-  
+
   teams <- league_team_slugs[[league]]
-  
+
   scrape_match <- function(url, round, season) {
     slug <- stringr::str_extract(url, "(?<=round-\\d{1,2}/)[^/]+")
     teams_in_url <- strsplit(slug, "-vs-")[[1]]
     team_names <- stringr::str_to_title(gsub("-", " ", teams_in_url))
-    
+
     page <- tryCatch(xml2::read_html(url), error = function(e) NULL)
     if (is.null(page)) return(NULL)
-    
+
     tables <- rvest::html_elements(page, "table.list")
     if (length(tables) < 2) return(NULL)
-    
+
     extract_table <- function(tbl, team_name) {
       rows <- rvest::html_elements(tbl, "tr")
       if (length(rows) < 4) return(NULL)
       rows <- rows[3:length(rows)]
-      
+
       data <- lapply(rows, function(row) {
         cells <- rvest::html_elements(row, "td")
         vapply(cells, rvest::html_text, character(1), trim = TRUE)
       })
-      
+
       data <- Filter(function(x) length(x) >= 6, data)
-      
+
       tbl_rows <- lapply(data, function(x) {
         tibble::tibble(
           player = x[1],
@@ -320,23 +338,23 @@ fetch_player_stats_rugbyproject <- function(seasons, league, rounds = 1:30) {
           league = league
         )
       })
-      
+
       combined <- dplyr::bind_rows(tbl_rows)
       combined[!(combined$player %in% c("total", "Total")), , drop = FALSE]
     }
-    
+
     tbl1 <- extract_table(tables[[1]], team_names[1])
     tbl2 <- extract_table(tables[[2]], team_names[2])
-    
+
     dplyr::bind_rows(tbl1, tbl2)
   }
-  
+
   check_url_exists <- function(url) {
     res <- tryCatch(httr::HEAD(url, httr::timeout(5)), error = function(e) NULL)
     if (is.null(res)) return(FALSE)
     res$status_code == 200L
   }
-  
+
   all_data_list <- list()
   for (season in seasons) {
     matchups <- expand.grid(
@@ -352,16 +370,16 @@ fetch_player_stats_rugbyproject <- function(seasons, league, rounds = 1:30) {
     matchups$url <- mapply(function(rnd, slg) {
       glue::glue("https://www.rugbyleagueproject.org/seasons/{league}-{season}/round-{rnd}/{slg}/stats.html")
     }, matchups$round, matchups$slug, USE.NAMES = FALSE)
-    
+
     exists_vec <- vapply(matchups$url, check_url_exists, logical(1))
     matchups <- matchups[exists_vec, , drop = FALSE]
-    
+
     cli::cli_inform(paste0("Found ", nrow(matchups), " valid matches for ", league, " ", season))
-    
-    match_data <- mapply(scrape_match, matchups$url, matchups$round, 
+
+    match_data <- mapply(scrape_match, matchups$url, matchups$round,
                          MoreArgs = list(season = season), SIMPLIFY = FALSE)
     all_data_list[[as.character(season)]] <- dplyr::bind_rows(match_data)
   }
-  
+
   dplyr::bind_rows(all_data_list)
 }
