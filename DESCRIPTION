@@ -1,6 +1,6 @@
 Package: nrlR
 Type: Package
-Title: Functions to scrape rugby data
+Title: Functions to Scrape Rugby Data
 Version: 0.1.1
 Authors@R: 
     person(given = "Daniel", 
@@ -10,10 +10,10 @@ Authors@R:
 Maintainer: Daniel Tomaro <danieltomaro@icloud.com>
 Description: Provides a set of functions to scrape and analyze rugby data. 
     Supports competitions including the National Rugby League, New South Wales Cup, 
-    Queensland Cup, Super League, 
-    and various representative and women's competitions. Includes functions to fetch 
-    player statistics, match results, ladders, venues, and coaching data. Designed to 
-    assist analysts, fans, and researchers in exploring historical and current rugby league data.
+    Queensland Cup, Super League, and various representative and women's competitions. 
+    Includes functions to fetch player statistics, match results, ladders, venues, and coaching data. 
+    Designed to assist analysts, fans, and researchers in exploring historical and current rugby league data. 
+    See Woods et al. (2017) <doi:10.1123/ijspp.2016-0187> for an example of rugby league performance analysis methodology.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
