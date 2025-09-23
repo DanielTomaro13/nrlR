@@ -62,9 +62,9 @@ fetch_lineups <- function(url, source = "nrl.com", type = "team_list") {
             stringr::str_replace(
               stringr::str_replace(
                 rvest::html_text2(home_node),
-                home_role_full, ""
+                stringr::fixed(home_role_full), ""
               ),
-              home_last, ""
+              stringr::fixed(home_last), ""
             )
           )
           if (is.na(home_role)) home_role <- "Unknown"
@@ -74,13 +74,14 @@ fetch_lineups <- function(url, source = "nrl.com", type = "team_list") {
           away_role_full <- rvest::html_text(rvest::html_element(away_node, "span.u-visually-hidden"), trim = TRUE)
           away_role <- stringr::str_extract(away_role_full, "^[^ ]+")
           away_last <- rvest::html_text(rvest::html_element(away_node, "span.u-font-weight-700"), trim = TRUE)
+
           away_first <- stringr::str_squish(
             stringr::str_replace(
               stringr::str_replace(
                 rvest::html_text2(away_node),
-                away_role_full, ""
+                stringr::fixed(away_role_full), ""
               ),
-              away_last, ""
+              stringr::fixed(away_last), ""
             )
           )
           if (is.na(away_role)) away_role <- "Unknown"
