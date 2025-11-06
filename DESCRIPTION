@@ -1,7 +1,7 @@
 Package: nrlR
 Type: Package
 Title: Functions to Scrape Rugby Data
-Version: 0.1.1
+Version: 0.1.2
 Authors@R: 
     person(given = "Daniel", 
            family = "Tomaro", 
