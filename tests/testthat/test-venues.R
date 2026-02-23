@@ -6,3 +6,5 @@ test_that("fetch_venues returns venue data for NRL 2023", {
   expect_gt(nrow(venues), 0)
   expect_true(all(venues$season == 2023))
 })
+
+fetch_venues(season = 2023, league = "nrl")
