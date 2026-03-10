@@ -1,3 +1,4 @@
+# total_score changed to score in fetch_team_stats_championdata, so updated test accordingly
 test_that("fetch_team_stats_championdata returns team stats for NRL 2025 rounds 1 and 2", {
   stats_round_1 <- fetch_team_stats_championdata(comp = 12445, round = 1)  # Example comp ID
   stats_round_2 <- fetch_team_stats_championdata(comp = 12445, round = 2)
@@ -9,11 +10,12 @@ test_that("fetch_team_stats_championdata returns team stats for NRL 2025 rounds 
 
   # Check for essential columns
   expect_true(all(c("match_id", "competition_id", "squadId",
-                    "team_name", "team_location", "total_score", "round") %in% names(stats)))
+                    "team_name", "team_location", "score", "round") %in% names(stats)))
 
   # Validate round values
   expect_true(all(stats$round %in% c(1, 2)))
-
+  dplyr::glimpse(stats)
   # Ensure scores are numeric (when present)
-  expect_true(is.numeric(stats$total_score) || all(is.na(stats$total_score)))
+  expect_true(is.numeric(stats$score) || all(is.na(stats$score)))
 })
+

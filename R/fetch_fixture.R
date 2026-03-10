@@ -92,10 +92,21 @@ fetch_fixture_nrl <- function(season = NULL, round_number = NULL, comp = 111) {
     if (!is.null(x$score)) x$score else NA_integer_
   }, integer(1))
   
-  # Extract kickoff times safely
-  kickoff_times <- vapply(fixtures$clock, function(x) {
-    if (!is.null(x$kickOffTimeLong)) x$kickOffTimeLong else NA_character_
-  }, character(1))
+
+  # Extract kickoff times safely - handles data frame OR list OR vector structures
+  # fixtures$clock now data.frame vs original list-of-lists structure
+  if (is.data.frame(fixtures$clock)) {
+   kickoff_times <- fixtures$clock$kickOffTimeLong
+  } else {
+    kickoff_times <- sapply(fixtures$clock, function(x) {
+     if (is.list(x) && !is.null(x$kickOffTimeLong)) x$kickOffTimeLong else NA_character_
+    })
+  }
+  kickoff_times <- as.character(kickoff_times)
+  kickoff_times[is.na(kickoff_times) | kickoff_times == ""] <- NA_character_
+
+
+
   
   kickoff_utc_vec <- lubridate::ymd_hms(kickoff_times, tz = "UTC")
   kickoff_local_vec <- lubridate::with_tz(kickoff_utc_vec, "Australia/Sydney")

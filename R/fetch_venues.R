@@ -76,7 +76,7 @@ fetch_venues_rugbyleagueproject <- function(season, league) {
     rvest::html_elements(row, "td") |>
       rvest::html_text(trim = TRUE)
   })
-  
+
   venue_links <- base::vapply(rows, function(row) {
     link <- rvest::html_element(row, "td a") |> rvest::html_attr("href")
     if (base::is.na(link)) {
@@ -91,25 +91,34 @@ fetch_venues_rugbyleagueproject <- function(season, league) {
     base::c(x, base::rep(NA_character_, max_cols - base::length(x)))
   })
   
-  venues_df <- tibble::tibble()
-  for (row_data in padded) {
-    venues_df <- dplyr::bind_rows(venues_df, tibble::as_tibble_row(row_data, .name_repair = "minimal"))
-  }
+
+# NEW APPROACH (CLEAN):
+# 1. Convert list of row vectors to matrix first - ensures rectangular structure
+venue_matrix <- do.call(rbind, padded)[, 1:10, drop = FALSE]
   
-  expected_cols <- c(
-    "venue", "alt_name", "home_team", "location", "country",
-    "games", "avg_attendance", "max_attendance", "total_attendance"
+  # 2. Explicitly name columns BEFORE tibble conversion - prevents auto-naming warnings
+colnames(venue_matrix) <- c("venue", "alt_name", "home_team", "location", "country",
+                           "games", "avg_attendance", "max_attendance", "total_attendance", 
+                           "extra")
+# 3. Convert to tibble then add metadata columns with modern tidyverse pipe
+venues_df <- tibble::as_tibble(venue_matrix) |>
+  dplyr::mutate(
+    season = season,
+    league = league,
+    venue_link = venue_links,
+    .before = 1
+  ) |>
+  dplyr::select(season, league, venue, home_team, location, country,
+                games, avg_attendance, max_attendance, total_attendance, venue_link) |> 
+  # convert attendance and games columns to numeric types, removing commas first
+  dplyr::mutate(
+    avg_attendance = as.numeric(stringr::str_remove(avg_attendance, ",")),
+    max_attendance = as.numeric(stringr::str_remove(max_attendance, ",")),
+    total_attendance = as.numeric(stringr::str_remove(total_attendance, ",")),
+    games = as.integer(games)
   )
-  base::colnames(venues_df)[seq_along(expected_cols)] <- expected_cols[seq_along(expected_cols)]
-  
-  venues_df$season <- season
-  venues_df$league <- league
-  venues_df$venue_link <- venue_links
-  
-  
-  venues_df <- venues_df[, c("season", "league", "venue", "home_team", "location", "country",
-                             "games", "avg_attendance", "max_attendance", "total_attendance", "venue_link")]
-  
-  
+
+# Result: Clean tibble, no console warnings, proper column names from the start
+ 
   return(venues_df)
 }
