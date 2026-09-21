@@ -1,0 +1,27 @@
+url: https://danieltomaro13.github.io/nrlR/
+template:
+  bootstrap: 5
+reference:
+- title: Fixtures, results and ladders
+  contents:
+  - fetch_fixture
+  - fetch_fixture_nrl
+  - fetch_results
+  - fetch_results_rugbyproject
+  - fetch_ladder
+  - fetch_ladder_nrl
+- title: Player and team statistics
+  contents:
+  - fetch_player_stats
+  - fetch_player_stats_championdata
+  - fetch_team_stats_championdata
+  - fetch_cd_comps
+- title: Team lists, injuries and suspensions
+  contents:
+  - fetch_lineups
+  - fetch_injuries_suspensions
+  - fetch_injuries_suspensions_zerotackle
+- title: Venues and coaches
+  contents:
+  - fetch_venues
+  - fetch_coaches

@@ -35,5 +35,5 @@ Suggests:
     testthat,
     rmarkdown
 Config/testthat/edition: 3
-URL: https://github.com/DanielTomaro13/nrlR
+URL: https://danieltomaro13.github.io/nrlR/, https://github.com/DanielTomaro13/nrlR
 BugReports: https://github.com/DanielTomaro13/nrlR/issues
